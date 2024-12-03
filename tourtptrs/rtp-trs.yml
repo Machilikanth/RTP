@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rtp-trs
+  namespace: default
+  labels:
+    app: rtp-trs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rtp-trs
+  template:
+    metadata:
+      labels:
+        app: rtp-trs
+    spec:
+      containers:
+        - name: rtp-trs
+          image: artifacts.toucanint.com/tou-rtp-trs/dev:tag
+          ports:
+            - containerPort: 8081
+      imagePullSecrets:
+        - name: jfrog-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rtp-trs-service
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    app: rtp-trs
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+      nodePort: 30224

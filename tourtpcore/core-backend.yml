@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-backend
+  namespace: default
+  labels:
+    app: core-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: core-backend
+  template:
+    metadata:
+      labels:
+        app: core-backend
+    spec:
+      containers:
+        - name: core-backend
+          image: artifacts.toucanint.com/tou-rtp-core/dev:tag
+          ports:
+            - containerPort: 8083
+      imagePullSecrets:
+        - name: jfrog-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-backend-service
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    app: core-backend
+  ports:
+    - protocol: TCP
+      port: 8083
+      targetPort: 8083
+      nodePort: 30228

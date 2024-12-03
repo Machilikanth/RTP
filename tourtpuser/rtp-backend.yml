@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rtp-backend
+  namespace: default
+  labels:
+    app: rtp-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rtp-backend
+  template:
+    metadata:
+      labels:
+        app: rtp-backend
+    spec:
+      containers:
+        - name: rtp-backend
+          image: artifacts.toucanint.com/tou-rtp-backend/dev:tag
+          ports:
+            - containerPort: 8081
+      imagePullSecrets:
+        - name: jfrog-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rtp-backend-service
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    app: rtp-backend
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+      nodePort: 30220
+

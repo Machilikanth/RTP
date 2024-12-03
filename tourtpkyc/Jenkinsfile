@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+    options {
+        // This is required if you want to clean before build
+        skipDefaultCheckout(true)
+    }
+
+     environment {
+ 	   LOGIN_CREDS = credentials('jfrog_credentials')
+     }
+
+    tools {
+        gradle "gradle-8.4"
+    }
+
+    stages {
+
+        stage('Fetch code') {
+            steps {
+                cleanWs()
+                git branch: 'develop', credentialsId: 'gitea_acc', url: 'https://192.168.61.88:3000/Toucan_Payments_India/tou-rtp-backend.git'
+            }
+        }
+
+        stage('login to jfrog registry') {
+            steps {
+                script {
+                    sh "docker login -u '$LOGIN_CREDS_USR' -p '$LOGIN_CREDS_PSW' artifacts.toucanint.com"
+                }
+            }
+        }
+
+        stage('build and push image') {
+            steps {
+                script {
+                     dir("tourtpkyc") {
+                        sh '''
+                            gradle build -x test
+                            docker build -t artifacts.toucanint.com/tou-rtp-kyc/dev:${BUILD_NUMBER} .
+                            docker push artifacts.toucanint.com/tou-rtp-kyc/dev:${BUILD_NUMBER}
+                            docker rmi -f artifacts.toucanint.com/tou-rtp-kyc/dev:${BUILD_NUMBER} || true
+                        '''
+                     }
+                }
+            }
+        }
+        stage('update image tag') {
+            steps {
+                script {
+                    dir("tourtpkyc") {
+                        sh '''
+                            sed -i "s/dev:tag/dev:${BUILD_NUMBER}/g" kyc-backend.yml
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('deploy') {
+            steps {
+                script {
+                    dir("tourtpkyc") {
+                        withCredentials([file(credentialsId: 'kube-cluster-rtp', variable: 'KUBECONFIG')]) {
+                            sh '''
+                                kubectl apply -f kyc-backend.yml
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
